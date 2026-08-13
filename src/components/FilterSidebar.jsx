@@ -10,7 +10,13 @@ export default function FilterSidebar({
   setMinProtein,
   sortBy,
   setSortBy,
-  resetFilters
+  resetFilters,
+  timeConstraint,
+  setTimeConstraint,
+  numPeople,
+  setNumPeople,
+  usePantryFirst,
+  setUsePantryFirst
 }) {
   return (
     <aside className="w-full lg:w-64 bg-white rounded-xl border border-gray-100 p-4 space-y-5">
@@ -95,6 +101,70 @@ export default function FilterSidebar({
             <span>20g</span>
             <span>150g</span>
           </div>
+        </div>
+
+        {/* Number of People */}
+        <div className="space-y-1.5 pt-2 border-t border-gray-100">
+          <div className="flex justify-between items-center text-gray-700 font-semibold">
+            <span>• No. of people</span>
+            <div className="flex items-center space-x-2 bg-gray-50 border border-gray-200 rounded-md px-2 py-0.5">
+              <button
+                onClick={() => setNumPeople(Math.max(1, numPeople - 1))}
+                className="text-gray-500 hover:text-gray-900 font-bold cursor-pointer"
+              >
+                <Minus className="w-3 h-3" />
+              </button>
+              <span className="font-bold text-gray-900 px-1 text-xs">{numPeople}</span>
+              <button
+                onClick={() => setNumPeople(numPeople + 1)}
+                className="text-gray-500 hover:text-gray-900 font-bold cursor-pointer"
+              >
+                <Plus className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Time Constraint */}
+        <div className="space-y-2 pt-2 border-t border-gray-100">
+          <div className="flex justify-between items-center text-gray-700 font-semibold">
+            <span>• Time</span>
+          </div>
+          <div className="flex items-center space-x-4 text-gray-600 font-medium">
+            <label className="flex items-center space-x-1.5 cursor-pointer hover:text-gray-900">
+              <input
+                type="radio"
+                name="timeConstraint"
+                checked={timeConstraint === 'Easy cook'}
+                onChange={() => setTimeConstraint('Easy cook')}
+                className="accent-[#84c225] w-3.5 h-3.5 cursor-pointer"
+              />
+              <span>Easy cook</span>
+            </label>
+            <label className="flex items-center space-x-1.5 cursor-pointer hover:text-gray-900">
+              <input
+                type="radio"
+                name="timeConstraint"
+                checked={timeConstraint === 'Flexible'}
+                onChange={() => setTimeConstraint('Flexible')}
+                className="accent-[#84c225] w-3.5 h-3.5 cursor-pointer"
+              />
+              <span>Flexible</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Use Pantry First */}
+        <div className="pt-2 border-t border-gray-100">
+          <label className="flex items-center space-x-2 cursor-pointer text-gray-700 font-semibold">
+            <input
+              type="checkbox"
+              checked={usePantryFirst}
+              onChange={(e) => setUsePantryFirst(e.target.checked)}
+              className="accent-[#84c225] w-4 h-4 cursor-pointer rounded"
+            />
+            <span>Use pantry first</span>
+          </label>
         </div>
 
       </div>

@@ -10,7 +10,9 @@ export default function RecipeBoard({
   sortBy,
   pantryItems,
   onAddMealToCart,
-  cartItems
+  cartItems,
+  timeConstraint,
+  usePantryFirst
 }) {
   const [splittingMeal, setSplittingMeal] = useState(null);
   
@@ -19,27 +21,6 @@ export default function RecipeBoard({
 
   // Track user's custom checked ingredient IDs per recipe card: { [`${recipe.id}-day-${dayIndex}`]: ['ing-1', 'ing-2'] }
   const [selectedIngsMap, setSelectedIngsMap] = useState({});
-
-  // 1. FILTER recipes based on budget & protein sliders
-  // 2. SORT based on sort radio selection
-  const filteredAndSorted = useMemo(() => {
-    const perMealBudget = budget / days / 3;
-
-    return recipes
-      .filter((rec) => {
-        const fitsInBudget = rec.totalDiscountPrice <= perMealBudget;
-        const meetsProtein = rec.totalProtein >= Math.floor(minProtein / 3);
-        return fitsInBudget && meetsProtein;
-      })
-      .sort((a, b) => {
-        if (sortBy === 'maxOffer') return b.discountPercent - a.discountPercent;
-        if (sortBy === 'lowestPrice') return a.totalDiscountPrice - b.totalDiscountPrice;
-        if (sortBy === 'highestPrice') return b.totalDiscountPrice - a.totalDiscountPrice;
-        if (sortBy === 'popular') return b.popularityScore - a.popularityScore;
-        if (sortBy === 'new') return b.id.localeCompare(a.id);
-        return 0;
-      });
-  }, [recipes, budget, days, minProtein, sortBy]);
 
   // Check pantry matches
   const getPantryMatches = (recipe) => {
@@ -51,6 +32,36 @@ export default function RecipeBoard({
       )
     );
   };
+
+  // 1. FILTER recipes based on budget, protein, and time sliders
+  // 2. SORT based on sort radio selection, prioritizing pantry items if usePantryFirst is true
+  const filteredAndSorted = useMemo(() => {
+    const perMealBudget = budget / days / 3;
+
+    return recipes
+      .filter((rec) => {
+        const fitsInBudget = rec.totalDiscountPrice <= perMealBudget;
+        const meetsProtein = rec.totalProtein >= Math.floor(minProtein / 3);
+        const meetsTime = timeConstraint === 'Easy cook' ? rec.cookTime <= 25 : true;
+        return fitsInBudget && meetsProtein && meetsTime;
+      })
+      .sort((a, b) => {
+        if (usePantryFirst) {
+          const aHasPantry = getPantryMatches(a).length > 0;
+          const bHasPantry = getPantryMatches(b).length > 0;
+          if (aHasPantry && !bHasPantry) return -1;
+          if (!aHasPantry && bHasPantry) return 1;
+        }
+
+        if (sortBy === 'maxOffer') return b.discountPercent - a.discountPercent;
+        if (sortBy === 'lowestPrice') return a.totalDiscountPrice - b.totalDiscountPrice;
+        if (sortBy === 'highestPrice') return b.totalDiscountPrice - a.totalDiscountPrice;
+        if (sortBy === 'popular') return b.popularityScore - a.popularityScore;
+        if (sortBy === 'new') return b.id.localeCompare(a.id);
+        return 0;
+      });
+  }, [recipes, budget, days, minProtein, sortBy, timeConstraint, usePantryFirst, pantryItems]);
+
 
   // Get selected ingredient objects for a recipe & day
   const getSelectedIngredientsList = (recipe, dayIndex) => {
@@ -222,7 +233,7 @@ export default function RecipeBoard({
                 </div>
               ) : (
                 <div
-                  className="flex flex-col md:flex-row gap-3 relative items-stretch transition-all duration-300 ease-in-out min-h-[360px]"
+                  className="flex flex-col md:flex-row gap-3 relative items-stretch transition-all duration-300 ease-in-out min-h-[275px]"
                   onMouseLeave={() => setHoveredCard(null)}
                 >
                   {dayRecipes.map((recipe, mealIdx) => {
@@ -271,12 +282,12 @@ export default function RecipeBoard({
 
                         {/* HOVERED EXPANDED STATE (Right Side Ingredients Details) */}
                         {isHovered ? (
-                          <div className="p-3.5 flex flex-col md:flex-row gap-4 h-full bg-white">
+                          <div className="p-3 flex flex-col md:flex-row gap-3 h-full bg-white">
                             
                             {/* Left Side: Recipe Summary & Media */}
-                            <div className="w-full md:w-5/12 flex flex-col justify-between space-y-3 border-r-0 md:border-r border-gray-100 pr-0 md:pr-3">
-                              <div className="space-y-2">
-                                <div className="relative h-32 w-full rounded-lg overflow-hidden bg-gray-100 shadow-2xs">
+                            <div className="w-full md:w-5/12 flex flex-col justify-between space-y-2 border-r-0 md:border-r border-gray-100 pr-0 md:pr-2.5">
+                              <div className="space-y-1.5">
+                                <div className="relative aspect-square max-h-28 w-full rounded-lg overflow-hidden bg-gray-100 shadow-2xs">
                                   <img
                                     src={recipe.image}
                                     alt={recipe.name}
@@ -285,59 +296,59 @@ export default function RecipeBoard({
                                       e.target.src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400';
                                     }}
                                   />
-                                  <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-xs text-white text-[10px] px-2 py-0.5 rounded font-medium">
+                                  <div className="absolute top-1.5 right-1.5 bg-black/60 backdrop-blur-xs text-white text-[10px] px-1.5 py-0.5 rounded font-medium">
                                     {recipe.cookTime} mins
                                   </div>
                                 </div>
 
                                 <div>
-                                  <h3 className="font-extrabold text-gray-900 text-sm leading-snug">
+                                  <h3 className="font-extrabold text-gray-900 text-xs leading-snug truncate" title={recipe.name}>
                                     {recipe.name}
                                   </h3>
-                                  <div className="flex items-center space-x-2 mt-1">
+                                  <div className="flex items-center space-x-1.5 mt-0.5">
                                     <span className="text-[#84c225] font-extrabold text-xs">
                                       {recipe.totalProtein}g Protein
                                     </span>
                                     <span className="text-gray-300">•</span>
-                                    <span className="text-gray-500 text-[11px]">
+                                    <span className="text-gray-500 text-[10px]">
                                       {allIngs.length} Ingredients
                                     </span>
                                   </div>
                                 </div>
 
                                 {pantryMatches.length > 0 && (
-                                  <div className="flex items-center space-x-1 text-[10px] text-emerald-800 bg-emerald-50 p-1.5 rounded border border-emerald-100">
-                                    <Leaf className="w-3.5 h-3.5 text-[#84c225] shrink-0" />
+                                  <div className="flex items-center space-x-1 text-[10px] text-emerald-800 bg-emerald-50 p-1 rounded border border-emerald-100">
+                                    <Leaf className="w-3 h-3 text-[#84c225] shrink-0" />
                                     <span>Pantry item available!</span>
                                   </div>
                                 )}
                               </div>
 
-                              <div className="pt-2 border-t border-gray-100 space-y-2">
+                              <div className="pt-1.5 border-t border-gray-100 space-y-1.5">
                                 <div className="flex items-center justify-between text-[11px]">
-                                  <span className="text-gray-500 font-medium">Selected Recipe Cost:</span>
+                                  <span className="text-gray-500 font-medium">Recipe Cost:</span>
                                   <span className="font-extrabold text-gray-900 text-xs">₹{selectedRecipeCost}</span>
                                 </div>
 
                                 <button
                                   onClick={(e) => handleMealCartClick(recipe, dayIndex, e)}
-                                  className={`w-full py-2 rounded-lg text-xs font-bold transition-all shadow-2xs flex items-center justify-center space-x-1 cursor-pointer ${
+                                  className={`w-full py-1.5 rounded-lg text-xs font-bold transition-all shadow-2xs flex items-center justify-center space-x-1 cursor-pointer ${
                                     isMealInCart
                                       ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
                                       : 'bg-[#84c225] hover:bg-[#689f38] text-white'
                                   }`}
                                 >
                                   <ShoppingBag className="w-3.5 h-3.5" />
-                                  <span>{isMealInCart ? 'Remove from Cart' : `Add ${selectedIngs.length} Items to Cart (₹${selectedRecipeCost})`}</span>
+                                  <span>{isMealInCart ? 'Remove from Cart' : `Add ${selectedIngs.length} Items (₹${selectedRecipeCost})`}</span>
                                 </button>
                               </div>
                             </div>
 
                             {/* Right Side: Expanded Ingredients Checklist & Portion Pricing */}
-                            <div className="w-full md:w-7/12 flex flex-col justify-between space-y-2 min-w-0" onClick={(e) => e.stopPropagation()}>
+                            <div className="w-full md:w-7/12 flex flex-col justify-between space-y-1.5 min-w-0" onClick={(e) => e.stopPropagation()}>
                               
                               {/* Header & Select All Toggle */}
-                              <div className="flex items-center justify-between pb-1.5 border-b border-gray-100">
+                              <div className="flex items-center justify-between pb-1 border-b border-gray-100">
                                 <div>
                                   <h4 className="font-bold text-gray-900 text-xs flex items-center space-x-1">
                                     <span>Recipe Ingredients</span>
@@ -347,7 +358,7 @@ export default function RecipeBoard({
 
                                 <button
                                   onClick={(e) => handleToggleSelectAll(recipe, dayIndex, e)}
-                                  className="text-[10px] font-semibold text-[#84c225] hover:underline flex items-center space-x-1 cursor-pointer bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100"
+                                  className="text-[10px] font-semibold text-[#84c225] hover:underline flex items-center space-x-1 cursor-pointer bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100"
                                 >
                                   {isAllSelected ? <CheckSquare className="w-3 h-3 text-[#84c225]" /> : <Square className="w-3 h-3 text-gray-400" />}
                                   <span>{isAllSelected ? 'Deselect All' : 'Select All'}</span>
@@ -355,15 +366,15 @@ export default function RecipeBoard({
                               </div>
 
                               {/* Helpful Rate Note */}
-                              <div className="bg-amber-50/80 border border-amber-200/70 p-1.5 rounded text-[10px] text-amber-900 flex items-start space-x-1.5">
-                                <Info className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                              <div className="bg-amber-50/80 border border-amber-200/70 p-1 rounded text-[9.5px] text-amber-900 flex items-start space-x-1">
+                                <Info className="w-3 h-3 text-amber-600 shrink-0 mt-0.5" />
                                 <p className="leading-tight">
-                                  <strong>Recipe Portion Rate:</strong> Rates & quantities reflect 1 recipe portion. Store pack (e.g. 1kg) is reusable 3-4 times.
+                                  <strong>Recipe Portion Rate:</strong> 1 portion cost. Store pack is reusable 3-4x.
                                 </p>
                               </div>
 
                               {/* Scrollable Ingredient Items List */}
-                              <div className="flex-1 overflow-y-auto max-h-[210px] space-y-1.5 pr-1 text-xs">
+                              <div className="flex-1 overflow-y-auto max-h-[145px] space-y-1 pr-1 text-xs">
                                 {allIngs.map((ing) => {
                                   const isChecked = selectedIngIds.includes(ing.id);
                                   const portionRate = ing.recipeDiscountPrice || ing.discountPrice || Math.round((ing.packetDiscountPrice || ing.price || 0) * 0.2);
@@ -374,37 +385,34 @@ export default function RecipeBoard({
                                     <div
                                       key={ing.id}
                                       onClick={(e) => handleToggleIngredient(recipe, dayIndex, ing.id, e)}
-                                      className={`p-2 rounded-lg border transition-all cursor-pointer flex items-center justify-between ${
+                                      className={`p-1.5 rounded-lg border transition-all cursor-pointer flex items-center justify-between ${
                                         isChecked
                                           ? 'bg-emerald-50/40 border-emerald-200 text-gray-900'
                                           : 'bg-gray-50/40 border-gray-100 text-gray-400 line-through'
                                       }`}
                                     >
                                       {/* Checkbox & Item Info */}
-                                      <div className="flex items-center space-x-2 min-w-0 pr-2">
+                                      <div className="flex items-center space-x-1.5 min-w-0 pr-1.5">
                                         <input
                                           type="checkbox"
                                           checked={isChecked}
                                           onChange={(e) => handleToggleIngredient(recipe, dayIndex, ing.id, e)}
-                                          className="w-3.5 h-3.5 accent-[#84c225] rounded cursor-pointer shrink-0"
+                                          className="w-3 h-3 accent-[#84c225] rounded cursor-pointer shrink-0"
                                         />
                                         <div className="min-w-0">
-                                          <p className={`font-bold text-[11px] truncate ${isChecked ? 'text-gray-900' : 'text-gray-400'}`}>
+                                          <p className={`font-bold text-[10.5px] truncate ${isChecked ? 'text-gray-900' : 'text-gray-400'}`}>
                                             {ing.productName}
                                           </p>
-                                          <p className="text-[10px] text-gray-400 truncate">
-                                            Req: <span className="font-semibold text-gray-700">{portionQty}</span> (Pack: {packQty})
+                                          <p className="text-[9.5px] text-gray-400 truncate">
+                                            Req: <span className="font-semibold text-gray-700">{portionQty}</span> ({packQty})
                                           </p>
                                         </div>
                                       </div>
 
                                       {/* Portion Rate vs Store Pack Price */}
                                       <div className="text-right shrink-0">
-                                        <span className={`font-extrabold text-xs block ${isChecked ? 'text-[#84c225]' : 'text-gray-400'}`}>
+                                        <span className={`font-extrabold text-[11px] block ${isChecked ? 'text-[#84c225]' : 'text-gray-400'}`}>
                                           ₹{portionRate}
-                                        </span>
-                                        <span className="text-[9px] text-gray-400 block">
-                                          recipe rate
                                         </span>
                                       </div>
                                     </div>
@@ -417,9 +425,9 @@ export default function RecipeBoard({
                           </div>
                         ) : isCompressed ? (
                           /* COMPRESSED NON-HOVERED STATE (Adjacent cards when another card is hovered) */
-                          <div className="p-2 h-full flex flex-col justify-between space-y-2 min-w-0 overflow-hidden">
-                            <div className="space-y-1.5 min-w-0">
-                              <div className="relative h-20 w-full bg-gray-100 rounded overflow-hidden shrink-0">
+                          <div className="p-2 h-full flex flex-col justify-between space-y-1.5 min-w-0 overflow-hidden">
+                            <div className="space-y-1 min-w-0">
+                              <div className="relative aspect-square w-full bg-gray-100 rounded overflow-hidden shrink-0">
                                 <img
                                   src={recipe.image}
                                   alt={recipe.name}
@@ -431,10 +439,10 @@ export default function RecipeBoard({
                               </div>
 
                               <div className="min-w-0">
-                                <h3 className="font-bold text-gray-800 text-[11px] truncate" title={recipe.name}>
+                                <h3 className="font-bold text-gray-800 text-[10px] truncate" title={recipe.name}>
                                   {recipe.name}
                                 </h3>
-                                <div className="text-[10px] text-gray-500 font-semibold truncate">
+                                <div className="text-[9.5px] text-gray-500 font-semibold truncate">
                                   {recipe.totalProtein}g Protein
                                 </div>
                               </div>
@@ -453,9 +461,9 @@ export default function RecipeBoard({
                           </div>
                         ) : (
                           /* NORMAL STANDARD STATE (No hover active in row) */
-                          <>
-                            {/* Thumbnail Image */}
-                            <div className="relative h-28 w-full bg-gray-50 overflow-hidden">
+                          <div className="flex flex-col h-full justify-between">
+                            {/* Square Thumbnail Image */}
+                            <div className="relative aspect-square w-full bg-gray-50 overflow-hidden rounded-t-xl">
                               <img
                                 src={recipe.image}
                                 alt={recipe.name}
@@ -467,7 +475,7 @@ export default function RecipeBoard({
                             </div>
 
                             {/* Meal details */}
-                            <div className="p-3 space-y-2 flex-1 flex flex-col justify-between">
+                            <div className="p-2.5 space-y-1.5 flex-1 flex flex-col justify-between">
                               <div>
                                 <h3 className="font-bold text-gray-900 text-xs line-clamp-1">
                                   {recipe.name}
@@ -481,19 +489,19 @@ export default function RecipeBoard({
 
                               {/* Pantry match badge */}
                               {pantryMatches.length > 0 && (
-                                <div className="flex items-center space-x-1 text-[10px] text-gray-600 bg-gray-50 p-1 rounded">
+                                <div className="flex items-center space-x-1 text-[10px] text-emerald-800 bg-emerald-50 p-1 rounded border border-emerald-100">
                                   <Leaf className="w-3 h-3 text-[#84c225]" />
                                   <span>Pantry item match</span>
                                 </div>
                               )}
 
                               {/* Selection action */}
-                              <div className="pt-2 border-t border-gray-50 flex items-center justify-between text-[11px]">
-                                <span className="text-gray-400">{allIngs.length} items • Hover/click to expand</span>
+                              <div className="pt-1.5 border-t border-gray-100 flex items-center justify-between text-[10.5px]">
+                                <span className="text-gray-400">{allIngs.length} items</span>
 
                                 <button
                                   onClick={(e) => handleMealCartClick(recipe, dayIndex, e)}
-                                  className={`px-2.5 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
+                                  className={`px-2 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
                                     isMealInCart
                                       ? 'bg-red-50 text-red-500 hover:bg-red-100'
                                       : 'bg-[#84c225] hover:bg-[#689f38] text-white'
@@ -504,7 +512,7 @@ export default function RecipeBoard({
                               </div>
 
                             </div>
-                          </>
+                          </div>
                         )}
 
                       </div>

@@ -23,6 +23,9 @@ export default function App() {
   const [days, setDays] = useState(3);
   const [minProtein, setMinProtein] = useState(50);
   const [sortBy, setSortBy] = useState('popular');
+  const [timeConstraint, setTimeConstraint] = useState('Flexible');
+  const [numPeople, setNumPeople] = useState(2);
+  const [usePantryFirst, setUsePantryFirst] = useState(false);
 
   // My Pantry initial state
   const [pantryItems, setPantryItems] = useState([
@@ -154,6 +157,9 @@ export default function App() {
     setDays(3);
     setMinProtein(50);
     setSortBy('popular');
+    setTimeConstraint('Flexible');
+    setNumPeople(2);
+    setUsePantryFirst(false);
   };
 
   if (loading) {
@@ -201,17 +207,23 @@ export default function App() {
           <div className="flex flex-col lg:flex-row gap-5 items-start">
             
             {/* 1. Left Column (Filters & Sort Sidebar) */}
-            <FilterSidebar
-              budget={budget}
-              setBudget={setBudget}
-              days={days}
-              setDays={setDays}
-              minProtein={minProtein}
-              setMinProtein={setMinProtein}
-              sortBy={sortBy}
-              setSortBy={setSortBy}
-              resetFilters={resetFilters}
-            />
+              <FilterSidebar
+                budget={budget}
+                setBudget={setBudget}
+                days={days}
+                setDays={setDays}
+                minProtein={minProtein}
+                setMinProtein={setMinProtein}
+                sortBy={sortBy}
+                setSortBy={setSortBy}
+                resetFilters={resetFilters}
+                timeConstraint={timeConstraint}
+                setTimeConstraint={setTimeConstraint}
+                numPeople={numPeople}
+                setNumPeople={setNumPeople}
+                usePantryFirst={usePantryFirst}
+                setUsePantryFirst={setUsePantryFirst}
+              />
 
             {/* 2. Middle Column (Dashboard Top + Recipes Board Bottom) */}
             <div className="flex-1 min-w-0 space-y-5">
@@ -240,6 +252,8 @@ export default function App() {
                 pantryItems={pantryItems}
                 onAddMealToCart={handleToggleMeal}
                 cartItems={cartItems}
+                timeConstraint={timeConstraint}
+                usePantryFirst={usePantryFirst}
               />
 
             </div>
