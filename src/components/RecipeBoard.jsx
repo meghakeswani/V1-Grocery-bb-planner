@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, Sparkles, Leaf, CheckSquare, Square, Info, ShoppingBag, Maximize2 } from 'lucide-react';
+import { Clock, Sparkles, Leaf, CheckSquare, Square, Info, ShoppingBag, Maximize2, ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function RecipeBoard({
   recipes,
@@ -14,7 +14,7 @@ export default function RecipeBoard({
 }) {
   const [splittingMeal, setSplittingMeal] = useState(null);
   
-  // Track currently hovered recipe card per day row (e.g. "0-1" -> dayIndex 0, mealIdx 1)
+  // Track currently expanded recipe card per day row (e.g. "0-1" -> dayIndex 0, mealIdx 1)
   const [hoveredCard, setHoveredCard] = useState(null);
 
   // Track user's custom checked ingredient IDs per recipe card: { [`${recipe.id}-day-${dayIndex}`]: ['ing-1', 'ing-2'] }
@@ -59,7 +59,6 @@ export default function RecipeBoard({
     const selectedIds = selectedIngsMap[key];
 
     if (!selectedIds) {
-      // Default: all ingredients selected
       return allIngs;
     }
     return allIngs.filter((ing) => selectedIds.includes(ing.id));
@@ -121,8 +120,8 @@ export default function RecipeBoard({
     }
   };
 
-  // Toggle meal: animate on add, instant on deselect
-  const handleMealClick = (recipe, dayIndex, e) => {
+  // Toggle meal cart state
+  const handleMealCartClick = (recipe, dayIndex, e) => {
     if (e) e.stopPropagation();
     const isMealInCart = cartItems.some(
       (item) => item.recipeName === recipe.name && item.dayAssigned === dayIndex + 1
@@ -139,6 +138,11 @@ export default function RecipeBoard({
         setSplittingMeal(null);
       }, 450);
     }
+  };
+
+  // Toggle expand on card click
+  const handleCardClick = (cardKey) => {
+    setHoveredCard((prev) => (prev === cardKey ? null : cardKey));
   };
 
   const dayList = Array.from({ length: days }, (_, i) => `DAY ${i + 1}`);
@@ -177,7 +181,7 @@ export default function RecipeBoard({
           <p className="text-[11px] text-gray-400">
             {noResults
               ? 'No meals match your filters. Try increasing budget or lowering protein target.'
-              : `Hover over any meal to expand ingredients and select custom items.`}
+              : `Hover or click any meal to expand ingredients, customize items, and see recipe rates.`}
           </p>
         </div>
         <span className="text-[11px] font-semibold text-gray-600 bg-gray-50 px-2 py-0.5 rounded border border-gray-100">
@@ -207,7 +211,7 @@ export default function RecipeBoard({
                 </span>
                 <span className="text-[10px] text-gray-400 font-medium flex items-center space-x-1">
                   <Maximize2 className="w-3 h-3 text-[#84c225]" />
-                  <span>3 Meals • Hover any card to expand details</span>
+                  <span>3 Meals • Hover or click card to expand</span>
                 </span>
               </div>
 
@@ -218,7 +222,7 @@ export default function RecipeBoard({
                 </div>
               ) : (
                 <div
-                  className="flex flex-col md:flex-row gap-3 relative items-stretch min-h-[360px]"
+                  className="flex flex-col md:flex-row gap-3 relative items-stretch transition-all duration-300 ease-in-out min-h-[360px]"
                   onMouseLeave={() => setHoveredCard(null)}
                 >
                   {dayRecipes.map((recipe, mealIdx) => {
@@ -243,7 +247,7 @@ export default function RecipeBoard({
 
                     const isAllSelected = selectedIngIds.length === allIngs.length;
 
-                    // Inline flex style guarantees 100% robust flex expansion across all browsers
+                    // Flex style calculation: expands hovered card to 3.6x width (~76%), shrinks compressed to 0.55x (~12%)
                     const flexStyle = isHovered
                       ? { flex: '3.6 1 0%', minWidth: '0px' }
                       : isCompressed
@@ -255,9 +259,7 @@ export default function RecipeBoard({
                         key={`${recipe.id}-${dayIndex}-${mealIdx}`}
                         style={flexStyle}
                         onMouseEnter={() => setHoveredCard(cardKey)}
-                        onMouseLeave={() => {
-                          if (hoveredCard === cardKey) setHoveredCard(null);
-                        }}
+                        onClick={() => handleCardClick(cardKey)}
                         className={`bg-white rounded-xl border overflow-hidden transition-all duration-300 ease-in-out flex flex-col justify-between cursor-pointer group ${
                           isHovered
                             ? 'shadow-2xl ring-2 ring-[#84c225] border-[#84c225] z-30'
@@ -269,7 +271,7 @@ export default function RecipeBoard({
 
                         {/* HOVERED EXPANDED STATE (Right Side Ingredients Details) */}
                         {isHovered ? (
-                          <div className="p-3.5 flex flex-col md:flex-row gap-4 h-full bg-white animate-fadeIn">
+                          <div className="p-3.5 flex flex-col md:flex-row gap-4 h-full bg-white">
                             
                             {/* Left Side: Recipe Summary & Media */}
                             <div className="w-full md:w-5/12 flex flex-col justify-between space-y-3 border-r-0 md:border-r border-gray-100 pr-0 md:pr-3">
@@ -318,7 +320,7 @@ export default function RecipeBoard({
                                 </div>
 
                                 <button
-                                  onClick={(e) => handleMealClick(recipe, dayIndex, e)}
+                                  onClick={(e) => handleMealCartClick(recipe, dayIndex, e)}
                                   className={`w-full py-2 rounded-lg text-xs font-bold transition-all shadow-2xs flex items-center justify-center space-x-1 cursor-pointer ${
                                     isMealInCart
                                       ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
@@ -332,7 +334,7 @@ export default function RecipeBoard({
                             </div>
 
                             {/* Right Side: Expanded Ingredients Checklist & Portion Pricing */}
-                            <div className="w-full md:w-7/12 flex flex-col justify-between space-y-2 min-w-0">
+                            <div className="w-full md:w-7/12 flex flex-col justify-between space-y-2 min-w-0" onClick={(e) => e.stopPropagation()}>
                               
                               {/* Header & Select All Toggle */}
                               <div className="flex items-center justify-between pb-1.5 border-b border-gray-100">
@@ -439,7 +441,7 @@ export default function RecipeBoard({
                             </div>
 
                             <button
-                              onClick={(e) => handleMealClick(recipe, dayIndex, e)}
+                              onClick={(e) => handleMealCartClick(recipe, dayIndex, e)}
                               className={`w-full py-1 rounded text-[10px] font-bold transition-all cursor-pointer truncate ${
                                 isMealInCart
                                   ? 'bg-red-50 text-red-500 hover:bg-red-100'
@@ -487,10 +489,10 @@ export default function RecipeBoard({
 
                               {/* Selection action */}
                               <div className="pt-2 border-t border-gray-50 flex items-center justify-between text-[11px]">
-                                <span className="text-gray-400">{allIngs.length} items • Hover to expand</span>
+                                <span className="text-gray-400">{allIngs.length} items • Hover/click to expand</span>
 
                                 <button
-                                  onClick={(e) => handleMealClick(recipe, dayIndex, e)}
+                                  onClick={(e) => handleMealCartClick(recipe, dayIndex, e)}
                                   className={`px-2.5 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
                                     isMealInCart
                                       ? 'bg-red-50 text-red-500 hover:bg-red-100'
