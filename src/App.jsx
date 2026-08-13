@@ -69,12 +69,32 @@ export default function App() {
     };
   }, [cartItems]);
 
-  // Toggle Meal handler: adds max 5 essential items OR removes them if already selected
-  const handleToggleMeal = (recipe, dayAssigned) => {
+  // Toggle Meal handler: adds custom selected ingredients OR default essential items
+  const handleToggleMeal = (recipe, dayAssigned, customIngredients = null) => {
     setCartItems((prevCart) => {
       const isMealInCart = prevCart.some(
         (item) => item.recipeName === recipe.name && item.dayAssigned === dayAssigned
       );
+
+      // If user passed specific customIngredients (e.g. from expanded card checkbox selection)
+      if (customIngredients && Array.isArray(customIngredients)) {
+        // Remove existing items for this recipe & day first
+        const filtered = prevCart.filter(
+          (item) => !(item.recipeName === recipe.name && item.dayAssigned === dayAssigned)
+        );
+
+        if (customIngredients.length === 0) {
+          return filtered;
+        }
+
+        const added = customIngredients.map((ing) => ({
+          ...ing,
+          count: 1,
+          dayAssigned: dayAssigned
+        }));
+
+        return [...filtered, ...added];
+      }
 
       if (isMealInCart) {
         // DESELECT: remove all items for this recipe+day
@@ -83,7 +103,7 @@ export default function App() {
         );
       }
 
-      // SELECT: add top 5 essential items
+      // SELECT: add top 5 essential items by default
       const newItems = [...prevCart];
       const itemsToAdd = recipe.essentialIngredients || recipe.ingredients.slice(0, 5);
 

@@ -101,6 +101,18 @@ export function getTopEssentialIngredients(ingredients, maxCount = 5) {
   return selected;
 }
 
+export function formatRecipeQuantity(packetQtyStr = '') {
+  const lower = packetQtyStr.toLowerCase().trim();
+  if (lower.includes('1 kg') || lower.includes('1kg')) return '200g';
+  if (lower.includes('500g') || lower.includes('500 g')) return '100g';
+  if (lower.includes('250g') || lower.includes('250 g')) return '50g';
+  if (lower.includes('100g') || lower.includes('100 g')) return '25g';
+  if (lower.includes('1 l') || lower.includes('1l')) return '200ml';
+  if (lower.includes('500 ml') || lower.includes('500ml')) return '100ml';
+  if (lower.includes('pc') || lower.includes('piece')) return '1 unit';
+  return '1 portion';
+}
+
 export function processCSVData(csvText) {
   const parsed = Papa.parse(csvText, {
     header: true,
@@ -134,14 +146,25 @@ export function processCSVData(csvText) {
     const fat = parseFloat(row['Fat (g)']) || 0;
     const fiber = parseFloat(row['Fiber (g)']) || 0;
 
+    const packetQty = row['Quantity'] || '1 kg';
+    const recipeQty = formatRecipeQuantity(packetQty);
+
     const ingredient = {
       id: `ing-${index}-${(row['ProductName'] || '').substring(0, 12).replace(/\s+/g, '-')}`,
       productName: row['ProductName'] || 'Fresh Ingredient',
       brand: row['Brand'] || '',
+      // Recipe portion prices (rate required for recipe only)
       price: price,
       discountPrice: discountPrice,
+      recipePrice: price,
+      recipeDiscountPrice: discountPrice,
+      // Full buying packet prices
+      packetPrice: rawPrice,
+      packetDiscountPrice: rawDiscountPrice,
+      // Quantities
+      quantity: packetQty, // Store buying packet quantity (e.g. 1 kg)
+      recipeQuantity: recipeQty, // Specific quantity needed for this recipe (e.g. 200g)
       imageUrl: row['Image_Url'],
-      quantity: row['Quantity'] || '1 kg',
       category: row['Category'] || 'Grocery',
       subCategory: row['SubCategory'] || '',
       absoluteUrl: row['Absolute_Url'] || '#',
